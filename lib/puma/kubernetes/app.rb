@@ -9,7 +9,6 @@ module Puma
       def initialize(launcher)
         @launcher = launcher
         clustered = (@launcher.options[:workers] || 0) > 0
-        @parser = Parser.new(clustered: clustered)
       end
 
       def call(_env)
@@ -26,14 +25,6 @@ module Puma
           when ::Kubernetes::Health::Config.route_readiness
             i_am_ready = ::Kubernetes::Health::Config.ready_if.arity.zero? ? ::Kubernetes::Health::Config.ready_if.call : ::Kubernetes::Health::Config.ready_if.call(req.params)
             http_code = puma_already_started?(extended_puma_stats) && i_am_ready ? 200 : 503
-          when ::Kubernetes::Health::Config.route_metrics
-            http_code = 200
-            if ::Kubernetes::Health::Config.response_format == 'json'
-              content = puma_status_json(extended_puma_stats)
-            else
-              prometheus_parse_status!(extended_puma_stats)
-              content = Prometheus::Client::Formats::Text.marshal(Prometheus::Client.registry)
-            end
           else
             http_code = 404
           end
